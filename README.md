@@ -1,5 +1,5 @@
 # Fake-Virus_enziminas.exe
-A fake virus that does no damage.
+A fake lightweight virus that does no damage.
 This project demonstrates the use of GDI+ in C++ to create various visual effects on the screen, such as color tints, sepia filters, glitches, disco effects, deep fry effects, flickering, screen shaking, and more. The application runs these effects in a random order to create a chaotic visual experience.
 
 ## Features
