@@ -27,7 +27,7 @@ void ApplyTint(HDC hdc, int width, int height, Color tintColor) {
 }
 
 void ApplySepia(HDC hdc, int width, int height) {
-    ApplyTint(hdc, width, height, Color(64, 112, 66, 20)); // Sepia Tone
+    ApplyTint(hdc, width, height, Color(64, 112, 66, 20));
 }
 
 void DrawGlitches(HDC hdc, int width, int height) {
@@ -66,7 +66,7 @@ Color HSVtoRGB(float h, float s, float v, BYTE alpha = 64) {
 
 void ApplyDisco(HDC hdc, int width, int height, float hue) {
     Graphics graphics(hdc);
-    Color discoColor = HSVtoRGB(hue, 1.0f, 1.0f, 64); // Using hue to change colors
+    Color discoColor = HSVtoRGB(hue, 1.0f, 1.0f, 64); 
     SolidBrush brush(discoColor);
     graphics.FillRectangle(&brush, 0, 0, width, height);
 }
@@ -75,8 +75,8 @@ void ApplyDisco(HDC hdc, int width, int height, float hue) {
 
 void ApplyDeepFry(HDC hdc, int width, int height) {
     Graphics graphics(hdc);
-    SolidBrush redBrush(Color(90, 255, 80, 0)); // Red extreme contrast
-    SolidBrush yellowBrush(Color(60, 255, 255, 0)); // Yellow
+    SolidBrush redBrush(Color(90, 255, 80, 0)); 
+    SolidBrush yellowBrush(Color(60, 255, 255, 0)); 
 
     graphics.FillRectangle(&redBrush, 0, 0, width, height);
     graphics.FillRectangle(&yellowBrush, 0, 0, width, height);
@@ -95,8 +95,8 @@ void ApplyDeepFry(HDC hdc, int width, int height) {
 
 void ApplyFlicker(HDC hdc, int width, int height) {
     Graphics graphics(hdc);
-    BYTE intensity = (rand() % 2 == 0) ? 255 : 0; // Random black/white flicker
-    BYTE alpha = rand() % 100 + 50; // Random alpha for intensity
+    BYTE intensity = (rand() % 2 == 0) ? 255 : 0; 
+    BYTE alpha = rand() % 100 + 50; 
     Color flickerColor(alpha, intensity, intensity, intensity);
     SolidBrush flickerBrush(flickerColor);
     graphics.FillRectangle(&flickerBrush, 0, 0, width, height);
@@ -106,7 +106,7 @@ void ApplyFlicker(HDC hdc, int width, int height) {
 
 void ApplyScreenShake(HDC hdc, int width, int height) {
     Graphics graphics(hdc);
-    int shakeMagnitude = 10; // Pixels
+    int shakeMagnitude = 10; 
 
     HDC memDC = CreateCompatibleDC(hdc);
     HBITMAP hBitmap = CreateCompatibleBitmap(hdc, width, height);
@@ -184,7 +184,7 @@ int main() {
         int effect = rand() % 8; // 8 total effects
         switch (effect) {
             case 0:
-                ApplyTint(hdc, screenWidth, screenHeight, Color(64, 0, 255, 255)); // cyan tint
+                ApplyTint(hdc, screenWidth, screenHeight, Color(64, 0, 255, 255));
                 break;
             case 1:
                 ApplySepia(hdc, screenWidth, screenHeight);
@@ -207,7 +207,7 @@ int main() {
                 ApplyScreenShake(hdc, screenWidth, screenHeight);
                 break;
             case 7:
-                ApplyMoveScreen(hdc, screenWidth, screenHeight); // Apply move screen effect
+                ApplyMoveScreen(hdc, screenWidth, screenHeight); 
                 break;
         }
         Sleep(50);
