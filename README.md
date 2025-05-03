@@ -53,5 +53,5 @@ The program uses GDI+ to manipulate the screen's contents by creating various vi
 ## Notes
 
 - This project is intended for educational and experimental purposes. The effects are designed to create a chaotic visual experience and are not optimized for performance.
-- The `Sleep(50)` function in the main loop ensures that the effects are visible long enough for the user to experience them, but it also means the program isn't running at maximum performance.
+- **DO NOT USE IT ON YOUR BOSS OR PROFESSOR, I AM NOT OBLIGATED FOR ANY JOB LOST.**
 
