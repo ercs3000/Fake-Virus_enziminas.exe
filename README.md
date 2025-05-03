@@ -46,12 +46,12 @@ The program uses GDI+ to manipulate the screen's contents by creating various vi
 - **Glitches**: Random rectangles with various colors simulate a glitchy appearance.
 - **Disco**: The screen color is continuously shifted in hue for a disco effect.
 - **Deep Fry**: A contrast-heavy effect that makes the screen appear over-saturated and harsh.
-- **Flicker**: The screen flashes between black and white to simulate flickering.
+- **Flicker**: The screen flashes black and white to simulate flickering.
 - **Screen Shake**: The screen shifts randomly, simulating a "vibration" effect.
-- **Move Screen**: The screen shifts its content in random directions.
+- **Move Screen**: The screen shifts its content randomly.
 
 ## Notes
 
 - This project is intended for educational and experimental purposes. The effects are designed to create a chaotic visual experience and are not optimized for performance.
-- **DO NOT USE IT ON YOUR BOSS OR PROFESSOR, I AM NOT OBLIGATED FOR ANY JOB LOST.**
+- **DO NOT USE IT ON YOUR BOSS OR PROFESSOR, I AM NOT OBLIGATED FOR ANY JOB LOSS.**
 
