@@ -32,7 +32,7 @@ This project demonstrates the use of GDI+ in C++ to create various visual effect
    - Open the Command Prompt (CMD) and navigate to the folder containing the source file.
    - Run the following command to compile the C++ file:
      ```bash
-     g++ -o enziminas.exe enziminas.cpp -lgdi32 -lgdiplus
+     g++ enziminas.cpp -lgdi32 -lmsimg32 -lgdiplus -o enziminas.exe
      ```
 
 ## How It Works
