@@ -5,7 +5,7 @@
 #include <cmath>
 
 #pragma comment(lib, "Gdiplus.lib")
-#pragma comment(lib, "Msimg32.lib") // Needed for AlphaBlend
+#pragma comment(lib, "Msimg32.lib")
 
 using namespace Gdiplus;
 
@@ -114,7 +114,7 @@ void ApplyFlicker(HDC hdc, int width, int height) {
 // === Screen Shake Effect ===
 
 void ApplyScreenShake(HDC hdc, int width, int height) {
-    int shakeMagnitude = 10;
+    int shakeMagnitude = rand() % 25;
     HDC memDC = CreateCompatibleDC(hdc);
     HBITMAP hBitmap = CreateCompatibleBitmap(hdc, width, height);
     HBITMAP oldBitmap = (HBITMAP)SelectObject(memDC, hBitmap);
@@ -166,7 +166,8 @@ void ApplyMoveScreen(HDC hdc, int width, int height) {
 
 // ==== MAIN LOOP ====
 
-int main() {
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow){
+    MessageBox(NULL, "Run?", "...\enziminas.exe", MB_OK);
     srand(static_cast<unsigned int>(time(nullptr)));
 
     ULONG_PTR gdiplusToken;
