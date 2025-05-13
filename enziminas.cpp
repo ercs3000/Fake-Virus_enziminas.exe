@@ -167,7 +167,7 @@ void ApplyMoveScreen(HDC hdc, int width, int height) {
 // ==== MAIN LOOP ====
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow){
-    MessageBox(NULL, "Run?", "...\enziminas.exe", MB_OK);
+    MessageBox(0, "Run?", "enziminas.exe", MB_OK);
     srand(static_cast<unsigned int>(time(nullptr)));
 
     ULONG_PTR gdiplusToken;
