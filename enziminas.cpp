@@ -3,6 +3,8 @@
 #include <ctime>
 #include <cstdlib>
 #include <cmath>
+#include <vector>
+#include <algorithm>
 
 #pragma comment(lib, "Gdiplus.lib")
 #pragma comment(lib, "Msimg32.lib")
@@ -23,16 +25,70 @@ void ShutdownGDIPlus(ULONG_PTR &gdiplusToken) {
 // ==== EFFECTS ====
 
 void ApplyTint(HDC hdc, int width, int height, Color tintColor) {
+    HDC memDC = CreateCompatibleDC(hdc);
+    HBITMAP bmp = CreateCompatibleBitmap(hdc, width, height);
+    HBITMAP oldBmp = (HBITMAP)SelectObject(memDC, bmp);
+
+    // Fill the memory DC with the tint color
     HBRUSH brush = CreateSolidBrush(RGB(tintColor.GetRed(), tintColor.GetGreen(), tintColor.GetBlue()));
-    BLENDFUNCTION blend = {AC_SRC_OVER, 0, 64, 0};
-    RECT rect = {0, 0, width, height};
-    AlphaBlend(hdc, 0, 0, width, height, CreateCompatibleDC(hdc), 0, 0, 0, 0, blend);
-    FillRect(hdc, &rect, brush);
+    RECT rect = { 0, 0, width, height };
+    FillRect(memDC, &rect, brush);
     DeleteObject(brush);
+
+    // Blend onto the screen using the alpha value from tintColor
+    BLENDFUNCTION blend = {};
+    blend.BlendOp = AC_SRC_OVER;
+    blend.BlendFlags = 0;
+    blend.SourceConstantAlpha = tintColor.GetAlpha(); // Opacity (0–255)
+    blend.AlphaFormat = 0; // No per-pixel alpha
+
+    AlphaBlend(hdc, 0, 0, width, height, memDC, 0, 0, width, height, blend);
+
+    SelectObject(memDC, oldBmp);
+    DeleteObject(bmp);
+    DeleteDC(memDC);
 }
 
 void ApplySepia(HDC hdc, int width, int height) {
     ApplyTint(hdc, width, height, Color(64, 112, 66, 20)); // Sepia Tone
+}
+void ApplyContrast(HDC hdc, int width, int height, float contrastFactor = 1.5f) {
+    HDC memDC = CreateCompatibleDC(hdc);
+    HBITMAP hBitmap = CreateCompatibleBitmap(hdc, width, height);
+    HBITMAP oldBitmap = (HBITMAP)SelectObject(memDC, hBitmap);
+
+    // Copy screen to memory
+    BitBlt(memDC, 0, 0, width, height, hdc, 0, 0, SRCCOPY);
+
+    BITMAPINFO bmi = {0};
+    bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+    bmi.bmiHeader.biWidth = width;
+    bmi.bmiHeader.biHeight = -height;  // top-down DIB
+    bmi.bmiHeader.biPlanes = 1;
+    bmi.bmiHeader.biBitCount = 32;
+    bmi.bmiHeader.biCompression = BI_RGB;
+
+    std::vector<BYTE> pixels(width * height * 4);
+    GetDIBits(memDC, hBitmap, 0, height, pixels.data(), &bmi, DIB_RGB_COLORS);
+
+    for (int i = 0; i < width * height * 4; i += 4) {
+        for (int j = 0; j < 3; ++j) {
+            float color = pixels[i + j] / 255.0f;
+            color -= 0.5f;
+            color *= contrastFactor;
+            color += 0.5f;
+            color *= 255.0f;
+            pixels[i + j] = static_cast<BYTE>(std::max(0, std::min(255, static_cast<int>(color))));
+        }
+    }
+
+    SetDIBits(memDC, hBitmap, 0, height, pixels.data(), &bmi, DIB_RGB_COLORS);
+
+    BitBlt(hdc, 0, 0, width, height, memDC, 0, 0, SRCCOPY);
+
+    SelectObject(memDC, oldBitmap);
+    DeleteObject(hBitmap);
+    DeleteDC(memDC);
 }
 
 void DrawGlitches(HDC hdc, int width, int height) {
@@ -181,7 +237,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     float hue = 0.0f;
 
     for (int i = 0; i < 300; ++i) {
-        int effect = rand() % 8;
+        int effect = rand() % 9;
         switch (effect) {
             case 0:
                 ApplyTint(hdc, screenWidth, screenHeight, Color(64, 0, 255, 255));
@@ -209,6 +265,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
             case 7:
                 ApplyMoveScreen(hdc, screenWidth, screenHeight);
                 break;
+            case 8:
+                ApplyContrast(hdc, screenWidth, screenHeight);
+                break;
+
         }
         Sleep(25);
     }
