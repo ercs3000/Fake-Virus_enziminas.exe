@@ -126,45 +126,59 @@ Color HSVtoRGB(float h, float s, float v, BYTE alpha = 64) {
     return Color(alpha, static_cast<BYTE>(r * 255), static_cast<BYTE>(g * 255), static_cast<BYTE>(b * 255));
 }
 
-void ApplyDisco(HDC hdc, int width, int height, float hue) {
-    Color discoColor = HSVtoRGB(hue, 1.0f, 1.0f, 64);
-    HBRUSH brush = CreateSolidBrush(RGB(discoColor.GetRed(), discoColor.GetGreen(), discoColor.GetBlue()));
-    RECT rect = {0, 0, width, height};
-    FillRect(hdc, &rect, brush);
-    DeleteObject(brush);
-}
 
 // === Deep Fry Effect ===
 
 void ApplyDeepFry(HDC hdc, int width, int height) {
-    HBRUSH redBrush = CreateSolidBrush(RGB(255, 80, 0));
-    HBRUSH yellowBrush = CreateSolidBrush(RGB(255, 255, 0));
-    RECT rect = {0, 0, width, height};
-    FillRect(hdc, &rect, redBrush);
-    FillRect(hdc, &rect, yellowBrush);
-    DeleteObject(redBrush);
-    DeleteObject(yellowBrush);
+    HDC memDC = CreateCompatibleDC(hdc);
+    HBITMAP hBitmap = CreateCompatibleBitmap(hdc, width, height);
+    HBITMAP oldBitmap = (HBITMAP)SelectObject(memDC, hBitmap);
 
-    for (int i = 0; i < 20; ++i) {
-        int x = rand() % width;
-        int y = rand() % height;
-        int w = rand() % 100 + 30;
-        int h = rand() % 100 + 30;
-        HBRUSH flash = CreateSolidBrush(RGB(255, 255, 255));
-        RECT r = {x, y, x + w, y + h};
-        FillRect(hdc, &r, flash);
-        DeleteObject(flash);
+    // Capture current screen
+    BitBlt(memDC, 0, 0, width, height, hdc, 0, 0, SRCCOPY);
+
+    BITMAPINFO bmi = {0};
+    bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+    bmi.bmiHeader.biWidth = width;
+    bmi.bmiHeader.biHeight = -height; // top-down
+    bmi.bmiHeader.biPlanes = 1;
+    bmi.bmiHeader.biBitCount = 32;
+    bmi.bmiHeader.biCompression = BI_RGB;
+
+    std::vector<BYTE> pixels(width * height * 4);
+    GetDIBits(memDC, hBitmap, 0, height, pixels.data(), &bmi, DIB_RGB_COLORS);
+
+    float contrast = 3.0f; // very high contrast
+    for (int i = 0; i < width * height * 4; i += 4) {
+        for (int j = 0; j < 3; ++j) {
+            // Boost red/yellow slightly
+            if (j == 2) pixels[i + j] = std::min(255, pixels[i + j] + 30); // Red
+            if (j == 1) pixels[i + j] = std::min(255, pixels[i + j] + 10); // Green
+
+            float color = pixels[i + j] / 255.0f;
+            color -= 0.5f;
+            color *= contrast;
+            color += 0.5f;
+            color *= 255.0f;
+
+            pixels[i + j] = static_cast<BYTE>(std::clamp(static_cast<int>(color), 0, 255));
+        }
+
+        // Add grain (pseudo noise)
+        int noise = (rand() % 51) - 25; // range [-25, 25]
+        for (int j = 0; j < 3; ++j) {
+            int noisy = pixels[i + j] + noise;
+            pixels[i + j] = static_cast<BYTE>(std::clamp(noisy, 0, 255));
+        }
     }
-}
 
-// === Flicker Effect ===
+    SetDIBits(memDC, hBitmap, 0, height, pixels.data(), &bmi, DIB_RGB_COLORS);
 
-void ApplyFlicker(HDC hdc, int width, int height) {
-    BYTE intensity = (rand() % 2 == 0) ? 255 : 0;
-    HBRUSH flickerBrush = CreateSolidBrush(RGB(intensity, intensity, intensity));
-    RECT rect = {0, 0, width, height};
-    FillRect(hdc, &rect, flickerBrush);
-    DeleteObject(flickerBrush);
+    BitBlt(hdc, 0, 0, width, height, memDC, 0, 0, SRCCOPY);
+
+    SelectObject(memDC, oldBitmap);
+    DeleteObject(hBitmap);
+    DeleteDC(memDC);
 }
 
 // === Screen Shake Effect ===
@@ -237,7 +251,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     float hue = 0.0f;
 
     for (int i = 0; i < 300; ++i) {
-        int effect = rand() % 9;
+        int effect = rand() % 7;
         switch (effect) {
             case 0:
                 ApplyTint(hdc, screenWidth, screenHeight, Color(64, 0, 255, 255));
@@ -249,26 +263,17 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
                 DrawGlitches(hdc, screenWidth, screenHeight);
                 break;
             case 3:
-                ApplyDisco(hdc, screenWidth, screenHeight, hue);
-                hue += 0.1f;
-                if (hue > 1.0f) hue -= 1.0f;
+                ApplyContrast(hdc, screenWidth, screenHeight);
                 break;
             case 4:
                 ApplyDeepFry(hdc, screenWidth, screenHeight);
                 break;
             case 5:
-                ApplyFlicker(hdc, screenWidth, screenHeight);
+                ApplyMoveScreen(hdc, screenWidth, screenHeight);
                 break;
             case 6:
                 ApplyScreenShake(hdc, screenWidth, screenHeight);
                 break;
-            case 7:
-                ApplyMoveScreen(hdc, screenWidth, screenHeight);
-                break;
-            case 8:
-                ApplyContrast(hdc, screenWidth, screenHeight);
-                break;
-
         }
         Sleep(25);
     }
