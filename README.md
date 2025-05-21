@@ -32,12 +32,12 @@ This project demonstrates the use of GDI+ in C++ to create various visual effect
    - Open the Command Prompt (CMD) and navigate to the folder containing the source file.
    - Run the following command to compile the C++ file:
      ```bash
-     g++ enziminas.cpp resource.o -lgdi32 -lmsimg32 -lgdiplus -mwindows -o enziminas.exe
+     g++ enziminas.cpp -std=c++17 resource.o -lgdi32 -lmsimg32 -lgdiplus -mwindows -o enziminas.exe
      ```
 
 ## How It Works
 
-The program uses GDI+ to manipulate the screen's contents by creating various visual effects. The effects are applied randomly in a loop, and the screen is updated with new effects every 50 milliseconds.
+The program uses GDI+ to manipulate the screen's contents by creating various visual effects. The effects are applied randomly in a loop, and the screen is updated with new effects every 25 milliseconds.
 
 ### Effects Breakdown:
 
