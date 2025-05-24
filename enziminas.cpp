@@ -26,44 +26,40 @@ void ShutdownGDIPlus(ULONG_PTR &gdiplusToken) {
 
 void ApplyTint(HDC hdc, int width, int height, Color tintColor) {
     HDC memDC = CreateCompatibleDC(hdc);
-    HBITMAP bmp = CreateCompatibleBitmap(hdc, width, height);
-    HBITMAP oldBmp = (HBITMAP)SelectObject(memDC, bmp);
+    HBITMAP hBitmap = CreateCompatibleBitmap(hdc, width, height);
+    HBITMAP oldBmp = (HBITMAP)SelectObject(memDC, hBitmap);
 
-    // Fill the memory DC with the tint color
-    HBRUSH brush = CreateSolidBrush(RGB(tintColor.GetRed(), tintColor.GetGreen(), tintColor.GetBlue()));
-    RECT rect = { 0, 0, width, height };
-    FillRect(memDC, &rect, brush);
-    DeleteObject(brush);
+    // Copy screen to memory
+    BitBlt(memDC, 0, 0, width, height, hdc, 0, 0, SRCCOPY);
 
-    // Blend onto the screen using the alpha value from tintColor
-    BLENDFUNCTION blend = {};
-    blend.BlendOp = AC_SRC_OVER;
-    blend.BlendFlags = 0;
-    blend.SourceConstantAlpha = tintColor.GetAlpha(); // Opacity (0–255)
-    blend.AlphaFormat = 0; // No per-pixel alpha
+    // Overlay a transparent tint on top of the captured screen
+    Graphics graphics(memDC);
+    SolidBrush brush(tintColor);
+    graphics.FillRectangle(&brush, 0, 0, width, height);
 
-    AlphaBlend(hdc, 0, 0, width, height, memDC, 0, 0, width, height, blend);
+    // Output the result
+    BitBlt(hdc, 0, 0, width, height, memDC, 0, 0, SRCCOPY);
 
     SelectObject(memDC, oldBmp);
-    DeleteObject(bmp);
+    DeleteObject(hBitmap);
     DeleteDC(memDC);
 }
 
 void ApplySepia(HDC hdc, int width, int height) {
     ApplyTint(hdc, width, height, Color(64, 112, 66, 20)); // Sepia Tone
 }
+
 void ApplyContrast(HDC hdc, int width, int height, float contrastFactor = 1.5f) {
     HDC memDC = CreateCompatibleDC(hdc);
     HBITMAP hBitmap = CreateCompatibleBitmap(hdc, width, height);
     HBITMAP oldBitmap = (HBITMAP)SelectObject(memDC, hBitmap);
 
-    // Copy screen to memory
     BitBlt(memDC, 0, 0, width, height, hdc, 0, 0, SRCCOPY);
 
     BITMAPINFO bmi = {0};
     bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
     bmi.bmiHeader.biWidth = width;
-    bmi.bmiHeader.biHeight = -height;  // top-down DIB
+    bmi.bmiHeader.biHeight = -height;
     bmi.bmiHeader.biPlanes = 1;
     bmi.bmiHeader.biBitCount = 32;
     bmi.bmiHeader.biCompression = BI_RGB;
@@ -104,8 +100,6 @@ void DrawGlitches(HDC hdc, int width, int height) {
     }
 }
 
-// === Disco Filter ===
-
 Color HSVtoRGB(float h, float s, float v, BYTE alpha = 64) {
     float r, g, b;
     int i = static_cast<int>(h * 6);
@@ -126,21 +120,17 @@ Color HSVtoRGB(float h, float s, float v, BYTE alpha = 64) {
     return Color(alpha, static_cast<BYTE>(r * 255), static_cast<BYTE>(g * 255), static_cast<BYTE>(b * 255));
 }
 
-
-// === Deep Fry Effect ===
-
 void ApplyDeepFry(HDC hdc, int width, int height) {
     HDC memDC = CreateCompatibleDC(hdc);
     HBITMAP hBitmap = CreateCompatibleBitmap(hdc, width, height);
     HBITMAP oldBitmap = (HBITMAP)SelectObject(memDC, hBitmap);
 
-    // Capture current screen
     BitBlt(memDC, 0, 0, width, height, hdc, 0, 0, SRCCOPY);
 
     BITMAPINFO bmi = {0};
     bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
     bmi.bmiHeader.biWidth = width;
-    bmi.bmiHeader.biHeight = -height; // top-down
+    bmi.bmiHeader.biHeight = -height;
     bmi.bmiHeader.biPlanes = 1;
     bmi.bmiHeader.biBitCount = 32;
     bmi.bmiHeader.biCompression = BI_RGB;
@@ -148,12 +138,11 @@ void ApplyDeepFry(HDC hdc, int width, int height) {
     std::vector<BYTE> pixels(width * height * 4);
     GetDIBits(memDC, hBitmap, 0, height, pixels.data(), &bmi, DIB_RGB_COLORS);
 
-    float contrast = 3.0f; // very high contrast
+    float contrast = 3.0f;
     for (int i = 0; i < width * height * 4; i += 4) {
         for (int j = 0; j < 3; ++j) {
-            // Boost red/yellow slightly
-            if (j == 2) pixels[i + j] = std::min(255, pixels[i + j] + 30); // Red
-            if (j == 1) pixels[i + j] = std::min(255, pixels[i + j] + 10); // Green
+            if (j == 2) pixels[i + j] = std::min(255, pixels[i + j] + 30);
+            if (j == 1) pixels[i + j] = std::min(255, pixels[i + j] + 10);
 
             float color = pixels[i + j] / 255.0f;
             color -= 0.5f;
@@ -164,8 +153,7 @@ void ApplyDeepFry(HDC hdc, int width, int height) {
             pixels[i + j] = static_cast<BYTE>(std::clamp(static_cast<int>(color), 0, 255));
         }
 
-        // Add grain (pseudo noise)
-        int noise = (rand() % 51) - 25; // range [-25, 25]
+        int noise = (rand() % 51) - 25;
         for (int j = 0; j < 3; ++j) {
             int noisy = pixels[i + j] + noise;
             pixels[i + j] = static_cast<BYTE>(std::clamp(noisy, 0, 255));
@@ -173,15 +161,12 @@ void ApplyDeepFry(HDC hdc, int width, int height) {
     }
 
     SetDIBits(memDC, hBitmap, 0, height, pixels.data(), &bmi, DIB_RGB_COLORS);
-
     BitBlt(hdc, 0, 0, width, height, memDC, 0, 0, SRCCOPY);
 
     SelectObject(memDC, oldBitmap);
     DeleteObject(hBitmap);
     DeleteDC(memDC);
 }
-
-// === Screen Shake Effect ===
 
 void ApplyScreenShake(HDC hdc, int width, int height) {
     int shakeMagnitude = rand() % 25;
@@ -201,8 +186,6 @@ void ApplyScreenShake(HDC hdc, int width, int height) {
     DeleteObject(hBitmap);
     DeleteDC(memDC);
 }
-
-// === Move Screen Effect ===
 
 void ApplyMoveScreen(HDC hdc, int width, int height) {
     HDC memDC = CreateCompatibleDC(hdc);
@@ -234,8 +217,6 @@ void ApplyMoveScreen(HDC hdc, int width, int height) {
     DeleteDC(memDC);
 }
 
-// ==== MAIN LOOP ====
-
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow){
     MessageBox(0, "Run?", "enziminas.exe", MB_OK);
     srand(static_cast<unsigned int>(time(nullptr)));
@@ -248,9 +229,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     int screenWidth = GetSystemMetrics(SM_CXSCREEN);
     int screenHeight = GetSystemMetrics(SM_CYSCREEN);
 
-    float hue = 0.0f;
-
-    for (int i = 0; i < 300; ++i) {
+    while (true){
         int effect = rand() % 7;
         switch (effect) {
             case 0:
