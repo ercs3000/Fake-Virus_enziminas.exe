@@ -119,6 +119,31 @@ Color HSVtoRGB(float h, float s, float v, BYTE alpha = 64) {
 
     return Color(alpha, static_cast<BYTE>(r * 255), static_cast<BYTE>(g * 255), static_cast<BYTE>(b * 255));
 }
+void RGBtoHSV(const Color& color, float& h, float& s, float& v) {
+    float r = color.GetRed() / 255.0f;
+    float g = color.GetGreen() / 255.0f;
+    float b = color.GetBlue() / 255.0f;
+
+    float max = std::max({r, g, b});
+    float min = std::min({r, g, b});
+    float delta = max - min;
+
+    h = 0.0f;
+    if (delta > 0.0f) {
+        if (max == r) {
+            h = fmodf((g - b) / delta, 6.0f);
+        } else if (max == g) {
+            h = ((b - r) / delta) + 2.0f;
+        } else {
+            h = ((r - g) / delta) + 4.0f;
+        }
+        h /= 6.0f;
+        if (h < 0.0f) h += 1.0f;
+    }
+
+    s = max == 0.0f ? 0.0f : delta / max;
+    v = max;
+}
 
 void ApplyDeepFry(HDC hdc, int width, int height) {
     HDC memDC = CreateCompatibleDC(hdc);
@@ -217,7 +242,106 @@ void ApplyMoveScreen(HDC hdc, int width, int height) {
     DeleteDC(memDC);
 }
 
+void ApplyPixelShuffle(HDC hdc, int width, int height) {
+    srand((unsigned)time(nullptr)); // Seed randomness
+
+    HDC memDC = CreateCompatibleDC(hdc);
+    HBITMAP hBitmap = CreateCompatibleBitmap(hdc, width, height);
+    HBITMAP oldBitmap = (HBITMAP)SelectObject(memDC, hBitmap);
+
+    // Copy screen content to memory bitmap
+    BitBlt(memDC, 0, 0, width, height, hdc, 0, 0, SRCCOPY);
+
+    // Prepare to access pixel data
+    BITMAPINFO bmi = {};
+    bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+    bmi.bmiHeader.biWidth = width;
+    bmi.bmiHeader.biHeight = -height; // Top-down DIB
+    bmi.bmiHeader.biPlanes = 1;
+    bmi.bmiHeader.biBitCount = 32;
+    bmi.bmiHeader.biCompression = BI_RGB;
+
+    std::vector<BYTE> pixels(width * height * 4);
+    GetDIBits(memDC, hBitmap, 0, height, pixels.data(), &bmi, DIB_RGB_COLORS);
+
+    // Shuffle pixel blocks instead of individual pixels
+    const int blockSize = 4; // 4x4 blocks
+    const int numSwaps = 5000; // More swaps = stronger effect
+
+    for (int i = 0; i < numSwaps; ++i) {
+        int x1 = rand() % (width - blockSize);
+        int y1 = rand() % (height - blockSize);
+        int x2 = rand() % (width - blockSize);
+        int y2 = rand() % (height - blockSize);
+
+        for (int dy = 0; dy < blockSize; ++dy) {
+            for (int dx = 0; dx < blockSize; ++dx) {
+                int idx1 = ((y1 + dy) * width + (x1 + dx)) * 4;
+                int idx2 = ((y2 + dy) * width + (x2 + dx)) * 4;
+                for (int c = 0; c < 4; ++c)
+                    std::swap(pixels[idx1 + c], pixels[idx2 + c]);
+            }
+        }
+    }
+
+    // Write pixels back to bitmap
+    SetDIBits(memDC, hBitmap, 0, height, pixels.data(), &bmi, DIB_RGB_COLORS);
+
+    // Copy modified image back to the screen
+    BitBlt(hdc, 0, 0, width, height, memDC, 0, 0, SRCCOPY);
+
+    // Cleanup
+    SelectObject(memDC, oldBitmap);
+    DeleteObject(hBitmap);
+}
+
+void ApplyDisco(HDC hdc, int width, int height, float hueShift) {
+    HDC memDC = CreateCompatibleDC(hdc);
+    HBITMAP hBitmap = CreateCompatibleBitmap(hdc, width, height);
+    HBITMAP oldBmp = (HBITMAP)SelectObject(memDC, hBitmap);
+
+    BitBlt(memDC, 0, 0, width, height, hdc, 0, 0, SRCCOPY);
+
+    BITMAPINFO bmi = {0};
+    bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+    bmi.bmiHeader.biWidth = width;
+    bmi.bmiHeader.biHeight = -height;
+    bmi.bmiHeader.biPlanes = 1;
+    bmi.bmiHeader.biBitCount = 32;
+    bmi.bmiHeader.biCompression = BI_RGB;
+
+    std::vector<BYTE> pixels(width * height * 4);
+    GetDIBits(memDC, hBitmap, 0, height, pixels.data(), &bmi, DIB_RGB_COLORS);
+
+    for (int i = 0; i < width * height * 4; i += 4) {
+        BYTE r = pixels[i + 2];
+        BYTE g = pixels[i + 1];
+        BYTE b = pixels[i + 0];
+
+        float h, s, v;
+        RGBtoHSV(Color(r, g, b), h, s, v);
+
+        h += hueShift;
+        if (h > 1.0f) h -= 1.0f;
+
+        Color discoColor = HSVtoRGB(h, s, v);
+        pixels[i + 0] = discoColor.GetBlue();
+        pixels[i + 1] = discoColor.GetGreen();
+        pixels[i + 2] = discoColor.GetRed();
+    }
+
+    SetDIBits(memDC, hBitmap, 0, height, pixels.data(), &bmi, DIB_RGB_COLORS);
+    BitBlt(hdc, 0, 0, width, height, memDC, 0, 0, SRCCOPY);
+
+    SelectObject(memDC, oldBmp);
+    DeleteObject(hBitmap);
+    DeleteDC(memDC);
+}
+
+
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow){
+	float hueShift = 0.0f;
+	static float sineTime = 0.0f;
     MessageBox(0, "Run?", "enziminas.exe", MB_OK);
     srand(static_cast<unsigned int>(time(nullptr)));
 
@@ -229,8 +353,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     int screenWidth = GetSystemMetrics(SM_CXSCREEN);
     int screenHeight = GetSystemMetrics(SM_CYSCREEN);
 
-    while (true){
-        int effect = rand() % 7;
+    for (int i = 0; i >= 0; i += 1){
+    int effectCount = 1 + rand() % 9;
+    for (int e = 0; e < effectCount; ++e) {
+        int effect = rand() % 9;
         switch (effect) {
             case 0:
                 ApplyTint(hdc, screenWidth, screenHeight, Color(64, 0, 255, 255));
@@ -253,10 +379,19 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
             case 6:
                 ApplyScreenShake(hdc, screenWidth, screenHeight);
                 break;
+            case 7:
+                ApplyPixelShuffle(hdc, screenWidth, screenHeight);
+                break;
+			case 8:
+				ApplyDisco(hdc, screenWidth, screenHeight, hueShift);
+				hueShift += 0.01f;
+				if (hueShift >= 1.0f) hueShift = 0.0f;
+				break;
+			
         }
-        Sleep(25);
     }
-
+    Sleep(25);
+}
     ReleaseDC(hwnd, hdc);
     ShutdownGDIPlus(gdiplusToken);
     return 0;
