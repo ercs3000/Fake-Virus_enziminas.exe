@@ -295,7 +295,7 @@ void ApplyPixelShuffle(HDC hdc, int width, int height) {
     DeleteObject(hBitmap);
 }
 
-void ApplyDisco(HDC hdc, int width, int height, float hueShift) {
+void ApplyDisco(HDC hdc, int width, int height) {
     HDC memDC = CreateCompatibleDC(hdc);
     HBITMAP hBitmap = CreateCompatibleBitmap(hdc, width, height);
     HBITMAP oldBmp = (HBITMAP)SelectObject(memDC, hBitmap);
@@ -321,7 +321,7 @@ void ApplyDisco(HDC hdc, int width, int height, float hueShift) {
         float h, s, v;
         RGBtoHSV(Color(r, g, b), h, s, v);
 
-        h += hueShift;
+        h += (rand() % 1001) / 1000;
         if (h > 1.0f) h -= 1.0f;
 
         Color discoColor = HSVtoRGB(h, s, v);
@@ -339,9 +339,8 @@ void ApplyDisco(HDC hdc, int width, int height, float hueShift) {
 }
 
 
-int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow){
-	float hueShift = 0.0f;
-	static float sineTime = 0.0f;
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
+    static float sineTime = 0.0f;
     MessageBox(0, "Run?", "enziminas.exe", MB_OK);
     srand(static_cast<unsigned int>(time(nullptr)));
 
@@ -353,45 +352,50 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     int screenWidth = GetSystemMetrics(SM_CXSCREEN);
     int screenHeight = GetSystemMetrics(SM_CYSCREEN);
 
-    for (int i = 0; i >= 0; i += 1){
-    int effectCount = 1 + rand() % 9;
-    for (int e = 0; e < effectCount; ++e) {
-        int effect = rand() % 9;
-        switch (effect) {
-            case 0:
-                ApplyTint(hdc, screenWidth, screenHeight, Color(64, 0, 255, 255));
-                break;
-            case 1:
-                ApplySepia(hdc, screenWidth, screenHeight);
-                break;
-            case 2:
-                DrawGlitches(hdc, screenWidth, screenHeight);
-                break;
-            case 3:
-                ApplyContrast(hdc, screenWidth, screenHeight);
-                break;
-            case 4:
-                ApplyDeepFry(hdc, screenWidth, screenHeight);
-                break;
-            case 5:
-                ApplyMoveScreen(hdc, screenWidth, screenHeight);
-                break;
-            case 6:
-                ApplyScreenShake(hdc, screenWidth, screenHeight);
-                break;
-            case 7:
-                ApplyPixelShuffle(hdc, screenWidth, screenHeight);
-                break;
-			case 8:
-				ApplyDisco(hdc, screenWidth, screenHeight, hueShift);
-				hueShift += 0.01f;
-				if (hueShift >= 1.0f) hueShift = 0.0f;
-				break;
-			
+    for (int i = 0; i >= 0; i += 1) {
+        try {
+            int effectCount = 1 + rand() % 9;
+            for (int e = 0; e < effectCount; ++e) {
+                int effect = rand() % 9;
+                switch (effect) {
+                    case 0:
+                        ApplyTint(hdc, screenWidth, screenHeight, Color(64, 0, 255, 255));
+                        break;
+                    case 1:
+                        ApplySepia(hdc, screenWidth, screenHeight);
+                        break;
+                    case 2:
+                        DrawGlitches(hdc, screenWidth, screenHeight);
+                        break;
+                    case 3:
+                        ApplyContrast(hdc, screenWidth, screenHeight);
+                        break;
+                    case 4:
+                        ApplyDeepFry(hdc, screenWidth, screenHeight);
+                        break;
+                    case 5:
+                        ApplyMoveScreen(hdc, screenWidth, screenHeight);
+                        break;
+                    case 6:
+                        ApplyScreenShake(hdc, screenWidth, screenHeight);
+                        break;
+                    case 7:
+                        ApplyPixelShuffle(hdc, screenWidth, screenHeight);
+                        break;
+                    case 8:
+			for (int i = 0; i < rand() % 11 + 5; i += 1){
+				ApplyDisco(hdc, screenWidth, screenHeight);
+			}
+                        break;
+                }
+            }
+        } catch (...) {
+            MessageBoxA(nullptr, "An effect caused a crash, program must stop.", "Error", MB_TOPMOST | MB_OK);
+			break; 
         }
+        Sleep(25);
     }
-    Sleep(25);
-}
+
     ReleaseDC(hwnd, hdc);
     ShutdownGDIPlus(gdiplusToken);
     return 0;
