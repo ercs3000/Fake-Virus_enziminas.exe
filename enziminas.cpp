@@ -338,6 +338,38 @@ void ApplyDisco(HDC hdc, int width, int height) {
     DeleteDC(memDC);
 }
 
+void DrawCurvedGlitches(HDC hdc, int screenWidth, int screenHeight) {
+    Graphics graphics(hdc);
+    graphics.SetSmoothingMode(SmoothingModeAntiAlias);
+
+    for (int i = 0; i < 10; ++i) {
+        GraphicsPath path;
+        
+        // Random start point
+        int x0 = rand() % screenWidth;
+        int y0 = rand() % screenHeight;
+
+        // Random control and end points
+        int x1 = rand() % screenWidth;
+        int y1 = rand() % screenHeight;
+        int x2 = rand() % screenWidth;
+        int y2 = rand() % screenHeight;
+        int x3 = rand() % screenWidth;
+        int y3 = rand() % screenHeight;
+
+        // Create a Bézier curve
+        path.StartFigure();
+        path.AddBezier(Point(x0, y0), Point(x1, y1), Point(x2, y2), Point(x3, y3));
+        path.CloseFigure();
+
+        // Random color and pen
+        Color color(128 + rand() % 128, rand() % 256, rand() % 256, rand() % 256);
+        Pen pen(color, 2 + rand() % 4);
+
+        // Draw the curve
+        graphics.DrawPath(&pen, &path);
+    }
+}
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
     static float sineTime = 0.0f;
@@ -354,9 +386,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
     for (int i = 0; i >= 0; i += 1) {
         try {
-            int effectCount = 1 + rand() % 9;
+            int effectCount = 1 + rand() % 11;
             for (int e = 0; e < effectCount; ++e) {
-                int effect = rand() % 9;
+                int effect = rand() % 11;
                 switch (effect) {
                     case 0:
                         ApplyTint(hdc, screenWidth, screenHeight, Color(64, 0, 255, 255));
@@ -383,10 +415,17 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
                         ApplyPixelShuffle(hdc, screenWidth, screenHeight);
                         break;
                     case 8:
-			for (int i = 0; i < rand() % 11 + 5; i += 1){
-				ApplyDisco(hdc, screenWidth, screenHeight);
-			}
+						for (int i = 0; i < rand() % 11 + 5; i += 1){
+							ApplyDisco(hdc, screenWidth, screenHeight);
+						}
                         break;
+					case 9:
+						for (int i = 0; i < 1001; i += 1){
+							ApplyMoveScreen(hdc, screenWidth, screenHeight);
+						}
+					case 10:
+						DrawCurvedGlitches(hdc, screenWidth, screenHeight);
+						break;
                 }
             }
         } catch (...) {
