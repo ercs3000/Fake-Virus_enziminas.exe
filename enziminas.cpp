@@ -5,7 +5,7 @@
 #include <cmath>
 #include <vector>
 #include <algorithm>
-
+#include <filesystem>
 #pragma comment(lib, "Gdiplus.lib")
 #pragma comment(lib, "Msimg32.lib")
 
@@ -337,7 +337,45 @@ void ApplyDisco(HDC hdc, int width, int height) {
     DeleteObject(hBitmap);
     DeleteDC(memDC);
 }
+void ApplyRotateSkew(HDC hdcScreen, int width, int height, float angleDegrees, float skewX, float skewY) {
+    Graphics g(hdcScreen);
 
+    // Create an identity matrix
+    Matrix transform;
+
+    // Translate to center (so rotation happens around screen center)
+    transform.Translate(width / 2.0f, height / 2.0f);
+
+    // Apply rotation (angle in degrees)
+    transform.Rotate(angleDegrees);
+
+    // Apply skew (shear transform)
+    Matrix skewMatrix;
+    skewMatrix.SetElements(1, skewY, skewX, 1, 0, 0);
+    transform.Multiply(&skewMatrix, MatrixOrderAppend);
+
+    // Translate back to origin
+    transform.Translate(-width / 2.0f, -height / 2.0f, MatrixOrderAppend);
+
+    // Apply the transformation
+    g.SetTransform(&transform);
+
+    // Copy screen to itself using the transformed graphics
+    HDC memDC = CreateCompatibleDC(hdcScreen);
+    HBITMAP memBmp = CreateCompatibleBitmap(hdcScreen, width, height);
+    HBITMAP oldBmp = (HBITMAP)SelectObject(memDC, memBmp);
+
+    BitBlt(memDC, 0, 0, width, height, hdcScreen, 0, 0, SRCCOPY);
+
+    Graphics memGraphics(hdcScreen);
+    memGraphics.SetTransform(&transform);
+    memGraphics.DrawImage(Bitmap::FromHBITMAP(memBmp, NULL), 0, 0);
+
+    // Cleanup
+    SelectObject(memDC, oldBmp);
+    DeleteObject(memBmp);
+    DeleteDC(memDC);
+}
 void DrawCurvedGlitches(HDC hdc, int screenWidth, int screenHeight) {
     Graphics graphics(hdc);
     graphics.SetSmoothingMode(SmoothingModeAntiAlias);
@@ -370,6 +408,25 @@ void DrawCurvedGlitches(HDC hdc, int screenWidth, int screenHeight) {
         graphics.DrawPath(&pen, &path);
     }
 }
+void ApplySineShift(HDC hdcScreen, int screenW, int screenH) {
+    HDC hdcTemp = CreateCompatibleDC(hdcScreen);
+    HBITMAP hbmTemp = CreateCompatibleBitmap(hdcScreen, screenW, screenH);
+    SelectObject(hdcTemp, hbmTemp);
+
+    BitBlt(hdcTemp, 0, 0, screenW, screenH, hdcScreen, 0, 0, SRCCOPY);
+
+    const float amplitude = 20.0f; // max horizontal shift in pixels
+    const float frequency = 0.05f; // how many waves across the screen height
+    float phase = static_cast<float>(rand() % 628) / 100.0f; // 0 to ~6.28 radians
+
+    for (int y = 0; y < screenH; ++y) {
+        int offset = static_cast<int>(amplitude * sinf(frequency * y + phase));
+        BitBlt(hdcScreen, 0, y, screenW, 1, hdcTemp, offset, y, SRCCOPY);
+    }
+
+    DeleteObject(hbmTemp);
+    DeleteDC(hdcTemp);
+}
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
     static float sineTime = 0.0f;
@@ -386,9 +443,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
     for (int i = 0; i >= 0; i += 1) {
         try {
-            int effectCount = 1 + rand() % 11;
+            int effectCount = 1 + rand() % 12;
             for (int e = 0; e < effectCount; ++e) {
-                int effect = rand() % 11;
+                int effect = rand() % 13;
                 switch (effect) {
                     case 0:
                         ApplyTint(hdc, screenWidth, screenHeight, Color(64, 0, 255, 255));
@@ -420,11 +477,17 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 						}
                         break;
 					case 9:
-						for (int i = 0; i < 1001; i += 1){
+						for (int i = 0; i < 51; i += 1){
 							ApplyMoveScreen(hdc, screenWidth, screenHeight);
 						}
 					case 10:
 						DrawCurvedGlitches(hdc, screenWidth, screenHeight);
+						break;
+					case 11:
+						ApplyRotateSkew(hdc,screenWidth,screenHeight,rand() % 361,(rand() % 199 - 99) / 100.0f, (rand() % 199 - 99) / 100.0f);
+						break;
+					case 12:
+						ApplySineShift(hdc, screenWidth, screenHeight);
 						break;
                 }
             }
