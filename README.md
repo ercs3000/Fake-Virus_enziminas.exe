@@ -32,5 +32,5 @@ The program uses GDI+ to manipulate the screen's contents by creating various vi
 ## Notes
 
 - This project is intended for educational and experimental purposes. The effects are designed to create a chaotic visual experience and are not optimized for performance.
-- **DO NOT USE IT ON YOUR BOSS OR PROFESSOR, I AM NOT OBLIGATED FOR ANY JOB LOSS.**
+- **DO NOT USE IT ON YOUR BOSS OR PROFESSOR, I AM NOT RESPONSIBLE FOR ANY JOB LOSS.**
 
