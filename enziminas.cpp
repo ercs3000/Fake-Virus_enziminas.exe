@@ -6,6 +6,7 @@
 #include <vector>
 #include <algorithm>
 #include <filesystem>
+#include <fstream>
 #pragma comment(lib, "Gdiplus.lib")
 #pragma comment(lib, "Msimg32.lib")
 
@@ -428,6 +429,38 @@ void ApplySineShift(HDC hdcScreen, int screenW, int screenH) {
     DeleteDC(hdcTemp);
 }
 
+std::vector<std::wstring> LoadSystem32Filenames(const std::string& filename) {
+    std::vector<std::wstring> filenames;
+    std::ifstream file(filename);
+    if (!file.is_open()) return filenames;
+
+    std::string line;
+    while (std::getline(file, line)) {
+        if (!line.empty()) {
+            // Convert from std::string to std::wstring
+            std::wstring wline(line.begin(), line.end());
+            filenames.push_back(wline);
+        }
+    }
+    return filenames;
+}
+
+void DrawFakeSystem32Files(Graphics& g, int width, int height) {
+    static std::vector<std::wstring> files = LoadSystem32Filenames("s32fnd.txt");
+    if (files.empty()) return; // If no files were loaded, do nothing
+
+    FontFamily fontFamily(L"Consolas");
+    Gdiplus::Font font(&fontFamily, 16, FontStyleRegular, UnitPixel);
+    SolidBrush brush(Color(255, 0, 255, 0)); // Bright green
+
+    int count = 10 + rand() % 20;
+    for (int i = 0; i < count; ++i) {
+        int index = rand() % files.size();
+        int x = rand() % width;
+        int y = rand() % height;
+        g.DrawString(files[index].c_str(), -1, &font, PointF((REAL)x, (REAL)y), &brush);
+    }
+}
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
     static float sineTime = 0.0f;
     MessageBox(0, "Run?", "enziminas.exe", MB_OK);
@@ -440,12 +473,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     HDC hdc = GetDC(hwnd);
     int screenWidth = GetSystemMetrics(SM_CXSCREEN);
     int screenHeight = GetSystemMetrics(SM_CYSCREEN);
-
+	Graphics g(hdc);
     for (int i = 0; i >= 0; i += 1) {
         try {
-            int effectCount = 1 + rand() % 12;
+            int effectCount = 1 + rand() % 14;
             for (int e = 0; e < effectCount; ++e) {
-                int effect = rand() % 13;
+                int effect = rand() % 15;
                 switch (effect) {
                     case 0:
                         ApplyTint(hdc, screenWidth, screenHeight, Color(64, 0, 255, 255));
@@ -489,6 +522,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 					case 12:
 						ApplySineShift(hdc, screenWidth, screenHeight);
 						break;
+					case 13:
+						DrawFakeSystem32Files(g, screenWidth, screenHeight);
+						break;
+					case 14:
+						const char* userProfile = std::getenv("USERPROFILE");
+						std::string filePath = std::string(userProfile) + "\\Desktop\\bro this is just a fake virus bruh.txt";
                 }
             }
         } catch (...) {
